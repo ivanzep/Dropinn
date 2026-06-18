@@ -221,6 +221,11 @@
       <p style="font-size:12px;color:#aaa;margin:8px 0 8px;line-height:1.5;">Edit the label and URL for each document button. Use the arrows to reorder.</p>
       <div id="link-slots"></div>
       <button class="reset-btn" onclick="resetLinks()">↺ Reset to defaults</button>
+      <div class="group-label" style="margin-top:18px;">Partner Websites</div>
+      <p style="font-size:12px;color:#aaa;margin:4px 0 8px;line-height:1.5;">Set the URL each partner image links to.</p>
+      <div id="partner-link-slots"></div>
+      <button class="reset-btn" onclick="resetPartnerLinks()">↺ Reset partner URLs</button>
+
     </div>
 
     </div>
@@ -377,6 +382,7 @@ function init() {
   buildSliders();
   buildImageSlots();
   buildLinkSlots();
+  buildPartnerSlots();
   updatePreview();
   updateBadges();
 
@@ -671,7 +677,7 @@ function updateBadges() {
   setBadge('colors', colorChanges);
   setBadge('type', sizeChanges);
   setBadge('images', imgCount);
-  const linkChanges = getLinkChanges();
+  const linkChanges = getLinkChanges() + getPartnerLinkChanges();
   setBadge('links', linkChanges);
 
   const parts = [
@@ -787,6 +793,14 @@ function applyEditsToHtml(html) {
     `$1\n${docLinksHtml}\n  $2`
   );
 
+
+  // 5. Partner image links — update href on data-partner-id anchors
+  partnerLinks.forEach(p => {
+    if (!p.url) return;
+    const re = new RegExp(`(<a[^>]*data-partner-id="${p.id}"[^>]*href=")[^"]*(")`);
+    out = out.replace(re, `$1${p.url}$2`);
+  });
+
   return out;
 }
 
@@ -826,7 +840,47 @@ const DEFAULT_DOC_LINKS = [
   { id: 'doc-6', name: 'Investment Letter',  url: '' },
 ];
 
+
+const DEFAULT_PARTNER_LINKS = [
+  { id: 'brown',   label: 'Brown Studio',  url: '' },
+  { id: 'casetta', label: 'Casetta',       url: '' },
+  { id: 'spark',   label: 'SPARK',         url: '' },
+];
+let partnerLinks = DEFAULT_PARTNER_LINKS.map(l => ({ ...l }));
+
 let docLinks = DEFAULT_DOC_LINKS.map(l => ({ ...l }));
+
+
+function buildPartnerSlots() {
+  const container = document.getElementById('partner-link-slots');
+  if (!container) return;
+  container.innerHTML = partnerLinks.map((p, i) => `
+    <div class="link-slot" id="pslot-${p.id}">
+      <div class="link-drag-num" style="color:var(--bark,#6b4c35)">${String(i+1).padStart(2,'0')}</div>
+      <div class="link-fields">
+        <div style="font-size:12px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">${p.label}</div>
+        <input class="link-url-input" type="url" value="${p.url}" placeholder="https://…"
+          oninput="onPartnerUrlChange(${i}, this.value)">
+      </div>
+    </div>`).join('');
+}
+
+function onPartnerUrlChange(idx, val) {
+  partnerLinks[idx].url = val;
+  exportedOk = false;
+  updateBadges();
+}
+
+function resetPartnerLinks() {
+  partnerLinks = DEFAULT_PARTNER_LINKS.map(l => ({ ...l }));
+  buildPartnerSlots();
+  exportedOk = false;
+  updateBadges();
+}
+
+function getPartnerLinkChanges() {
+  return partnerLinks.filter((p, i) => p.url !== (DEFAULT_PARTNER_LINKS[i]?.url || '')).length;
+}
 
 function buildLinkSlots() {
   const container = document.getElementById('link-slots');
