@@ -785,7 +785,7 @@ function applyEditsToHtml(html) {
   const docLinksHtml = docLinks.map((l, i) => {
     const delay = (i * 0.06).toFixed(2);
     const href = l.url ? l.url : '#';
-    return `    <a href="${href}" class="doc-btn reveal" data-doc-id="${l.id}" style="transition-delay:${delay}s">${l.name}</a>`;
+    return `    <a href="${href}" class="doc-btn reveal" data-doc-id="${l.id}" style="transition-delay:${delay}s" target="_blank" rel="noopener noreferrer">${l.name}</a>`;
   }).join('\n');
   out = out.replace(
     /(<div class="doc-links">)[\s\S]*?(<\/div>)/,
@@ -793,11 +793,14 @@ function applyEditsToHtml(html) {
   );
 
 
-  // 5. Partner image links — update href on data-partner-id anchors
+  // 5. Partner image links — match full <a> tag then swap href (order-independent)
   partnerLinks.forEach(p => {
     if (!p.url) return;
-    const re = new RegExp(`(<a[^>]*data-partner-id="${p.id}"[^>]*href=")[^"]*(")`);
-    out = out.replace(re, `$1${p.url}$2`);
+    // Match the entire opening tag containing data-partner-id, then replace href inside it
+    out = out.replace(
+      new RegExp(`(<a\\b[^>]*\\bdata-partner-id="${p.id}"[^>]*>)`),
+      match => match.replace(/href="[^"]*"/, `href="${p.url}"`)
+    );
   });
 
   return out;
